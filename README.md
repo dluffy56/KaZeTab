@@ -1,9 +1,7 @@
 # KaZeTab
 KaZeTab is a Chrome extension that turns the new tab page into a calm, customizable wallpaper experience with quick search and bookmarks.
 
- 
-<img width="1918" height="915" alt="Screenshot 2025-10-01 051825" src="https://github.com/user-attachments/assets/128d987c-cf4e-4107-9186-c7c280280bb9" />
-
+ <img src='assets/Screenshot 2026-04-22 233737.png'/>
 
 ## Features
 - Choose a wallpaper style like `coding`, `nature`, `anime`, or `space`
@@ -29,4 +27,7 @@ KaZeTab is a Chrome extension that turns the new tab page into a calm, customiza
 - If you change files locally, reload the extension from `chrome://extensions/` before testing again.
 
 ## Screenshots
-<img width="452" height="369" alt="Screenshot 2025-10-02 111428" src="https://github.com/user-attachments/assets/ac60a1d0-f5ff-4c7e-99c2-6678299a7369" />
+<img src="assets/Screenshot 2026-04-22 233609.png"/>
+<img src="assets/Screenshot 2026-04-22 233431.png"/>
+<img src="assets/Screenshot 2026-04-22 233356.png"/>
+<img src="assets/Screenshot 2026-04-22 233420.png"/>
