@@ -4,216 +4,172 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settings</title>
+  <title>KaZeTab Settings</title>
   <link rel="stylesheet" href="./css/settings.css">
-  <link rel="stylesheet" href="./css/bootstrap.min.css">
-
 </head>
 
-<body class="bg-dark" style="display: flex; align-items: center; justify-content:center; height: 100vh; width: 100vw;">
-  <div class="border border-white p-3 rounded" id="inner-body">
-    <h1 class="text-white mb-4" style="display: flex; justify-content: center;">Settings
-    </h1>
-    <div id="Wallpaper">
-      <div class="mode-select text-white mb-3 d-flex flex-column align-items-start" style="gap:8px;">
-        <div>
-          <small class="text-muted d-block mt-2 mb-2" style="color: white !important;">
-            Choose whether wallpapers Genre change by time-of-day or remain the same.
-          </small>
+<body class="settings-page">
+  <main class="settings-shell">
+    <section class="settings-hero">
+      <p class="eyebrow">KaZeTab Control Room</p>
+      <h1>Shape how every new tab feels.</h1>
+      <p class="hero-copy">
+        Pick a single vibe for the whole day or let KaZeTab shift through morning, afternoon, evening, and night.
+      </p>
+    </section>
+
+    <section class="settings-panel" id="Wallpaper">
+      <div class="mode-select">
+        <div class="mode-copy">
+          <h2>Wallpaper Mode</h2>
+          <p>Choose whether KaZeTab keeps one consistent mood or swaps styles across the day.</p>
         </div>
 
-        <div>
-          <button id="mode-different" type="button" class="btn btn-outline-light me-5 ms-3">Different by time</button>
-          <button id="mode-same" type="button" class="btn btn-outline-light ms-5">Same for all times</button>
+        <div class="mode-actions">
+          <button id="mode-different" type="button" class="mode-button">Different by time</button>
+          <button id="mode-same" type="button" class="mode-button">Same for all times</button>
         </div>
       </div>
 
-      <form id="settings-form" class="hiddenc">
-        <div>
-          <div style="display: flex; justify-content: center; font-size: medium; margin-top: 10px;">
-            <label for="Wallpaper-options" class="text-white"
-              style="display: flex; justify-content: center; margin-right: 2px;">
-              Select the Wallpaper type:
-            </label>
-
-            <select required id="Wallpaper-options" style="margin-left: 3px;">
+      <form id="settings-form" class="settings-form hiddenc">
+        <section class="settings-card">
+          <div class="field-group">
+            <label for="Wallpaper-options" class="field-label">Wallpaper style</label>
+            <select required id="Wallpaper-options" class="field-control">
               <option selected hidden disabled value="select">Select</option>
               <option value="coding">Coding</option>
-              <option value="Nature">Nature</option>
-              <option value="Anime">Anime</option>
-              <option value="Space">Space</option>
+              <option value="nature">Nature</option>
+              <option value="anime">Anime</option>
+              <option value="space">Space</option>
               <option value="typeagenre">Type a Genre</option>
-              <!-- <option value="custom">Custom</option> -->
             </select>
           </div>
-        </div>
 
-        <div id="typeagenre" class="hiddenc mt-3"
-          style="justify-content: center; align-items: center; margin-top: 10px;">
-          <label class="text-white " for="genre-input" style="font-size: medium; ">Type a genre:</label>
-          <input type="text" id="genre-input" class=" ms-2">
-        </div>
+          <div id="typeagenre" class="field-inline hiddenc">
+            <label class="field-label" for="genre-input">Custom genre</label>
+            <input type="text" id="genre-input" class="field-control" placeholder="lofi room, cyber city, cozy desk...">
+          </div>
+        </section>
 
-        <!-- <div id="custom" class="hiddenc" style="justify-content: center; align-items: center; margin-top: 10px;">
-          <button type="button" class="btn">Upload your custom image</button>
-        </div> -->
+        <section class="settings-card">
+          <div class="toggle-list">
+            <label class="toggle-row" for="timebased_wallpaper">
+              <span>
+                <strong>Same genre, different times</strong>
+                <small>Keep one theme and refresh it across the day.</small>
+              </span>
+              <input type="checkbox" role="switch" id="timebased_wallpaper">
+            </label>
 
-        <!-- <div class="quote" id="quote"
-          style="display: flex; justify-content: center; align-items: center; margin-top: 10px;">
-          <label for="quote-options" style="display: flex; justify-content: center; margin: 5px; font-size: medium;">
-            Select the quote type:
-          </label>
-          <select id="quote-options">
-            <option selected value="none">None</option>
-            <option value="default">Default</option>
-            <option value="Custom">Custom</option>
-          </select>
-        </div> -->
+            <label class="toggle-row" for="timebased_greetings">
+              <span>
+                <strong>Time-based greeting</strong>
+                <small>Show a greeting that changes with the hour.</small>
+              </span>
+              <input type="checkbox" role="switch" id="timebased_greetings">
+            </label>
 
-        <!-- <div id="quote_custom_div" class="hiddenc"
-          style="justify-content: center; align-items: center; margin-top: 10px;">
-          <label for="quote_input" style="font-size: medium;">Enter your Custom Quote:</label>
-          <input type="text" id="quote_input" style="margin-left: 3px;">
-        </div> -->
+            <label class="toggle-row" for="Show_Bookmakrs">
+              <span>
+                <strong>Show quick links</strong>
+                <small>Display bookmarks at the top of the new tab page.</small>
+              </span>
+              <input type="checkbox" role="switch" id="Show_Bookmakrs" checked>
+            </label>
+          </div>
+        </section>
 
-        <!-- <div style="justify-content: center; align-items: center; margin-top: 10px;">
-          <label for="weather_input" style="margin-left: 2px; font-size: medium;">Enter your city for weather
-            (optional):</label>
-          <input type="text" id="weather_input">
-        </div> -->
-
-        <!-- <div style="display: flex; justify-content: center; align-items: center; margin-top: 10px; font-size: medium;">
-          <input type="checkbox" id="timebased_greetings" role="switch">
-          <label for="timebased_greetings">Time Based Greetings</label>
-        </div> -->
-        <div class="form-check form-switch d-flex justify-content-center align-items-center text-white mt-3">
-          <input class="form-check-input" type="checkbox" role="switch" id="timebased_wallpaper">
-          <label class="form-check-label ms-2" for="timebased_greetings">Wallpaper change based on time(same genre)</label>
-        </div>
-
-        <div class="form-check form-switch d-flex justify-content-center align-items-center text-white mt-3">
-          <input class="form-check-input" type="checkbox" role="switch" id="timebased_greetings">
-          <label class="form-check-label ms-2" for="timebased_greetings">Time Based Greetings</label>
-        </div>
-         
-   <div class="form-check form-switch d-flex justify-content-center align-items-center text-white mt-3">
-          <input class="form-check-input" type="checkbox" role="switch" id="Show_Bookmakrs" checked>
-          <label class="form-check-label ms-2" for="Show_Bookmakrs">Show Bookmakrs</label>
-        </div>
-
-        <div style="display:flex; justify-content: center; align-items: center; margin: 10px; font-size: medium;"
-          class="mt-3">
-          <button type="submit" class="btn btn-primary">Submit</button>
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Save KaZeTab</button>
         </div>
       </form>
 
-      <form id="custom-settings-form" class="hiddenc">
-        <div>
-          <div style="display: flex; justify-content: center; font-size: medium; margin-top: 10px; ">
-            <label for="Wallpaper-options-morning" class="text-white"
-              style="display: flex; justify-content: center; margin-right: 2px;">
-              Type of wallpaper in Morning:
-            </label>
+      <form id="custom-settings-form" class="settings-form hiddenc">
+        <div class="slot-grid">
+          <section class="slot-card">
+            <div class="field-group">
+              <label for="Wallpaper-options-morning" class="field-label">Morning mood</label>
+              <select required id="Wallpaper-options-morning" class="field-control">
+                <option selected hidden disabled value="select">Select</option>
+                <option value="coding">Coding</option>
+                <option value="nature">Nature</option>
+                <option value="anime">Anime</option>
+                <option value="space">Space</option>
+                <option value="typeagenre_morning">Type a Genre</option>
+              </select>
+            </div>
 
-            <select required id="Wallpaper-options-morning" style="margin-left: 3px;">
-              <option selected hidden disabled value="select">Select</option>
-              <option value="coding">Coding</option>
-              <option value="Nature">Nature</option>
-              <option value="Anime">Anime</option>
-              <option value="Space">Space</option>
-              <option value="typeagenre_morning">Type a Genre</option>
-              <!-- <option value="custom">Custom</option> -->
-            </select>
-          </div>
+            <div id="typeagenre_morning" class="field-inline hiddenc">
+              <label class="field-label" for="genre-input-morning">Morning genre</label>
+              <input type="text" id="genre-input-morning" class="field-control" placeholder="sunrise, study desk, calm anime">
+            </div>
+          </section>
 
-          <div id="typeagenre_morning" class="hiddenc mt-3"
-            style="justify-content: center; align-items: center; margin-top: 10px; margin-left: 60px;">
-            <label class="text-white " for="genre-input-morning" style="font-size: medium; ">Type a genre for
-              Morning:</label>
-            <input type="text" id="genre-input-morning" class=" ms-2">
-          </div>
-          <div style="display: flex; justify-content: center; font-size: medium; margin-top: 10px;">
-            <label for="Wallpaper-options-morning" class="text-white"
-              style="display: flex; justify-content: center; margin-right: 2px;">
-              Type of wallpaper in Afternoon:
-            </label>
+          <section class="slot-card">
+            <div class="field-group">
+              <label for="Wallpaper-options-afternoon" class="field-label">Afternoon mood</label>
+              <select required id="Wallpaper-options-afternoon" class="field-control">
+                <option selected hidden disabled value="select">Select</option>
+                <option value="coding">Coding</option>
+                <option value="nature">Nature</option>
+                <option value="anime">Anime</option>
+                <option value="space">Space</option>
+                <option value="typeagenre_afternoon">Type a Genre</option>
+              </select>
+            </div>
 
-            <select required id="Wallpaper-options-afternoon" style="margin-left: 3px;">
-              <option selected hidden disabled value="select">Select</option>
-              <option value="coding">Coding</option>
-              <option value="Nature">Nature</option>
-              <option value="Anime">Anime</option>
-              <option value="Space">Space</option>
-              <option value="typeagenre_afternoon">Type a Genre</option>
-              <!-- <option value="custom">Custom</option> -->
-            </select>
-          </div>
+            <div id="typeagenre_afternoon" class="field-inline hiddenc">
+              <label class="field-label" for="genre-input-afternoon">Afternoon genre</label>
+              <input type="text" id="genre-input-afternoon" class="field-control" placeholder="creative setup, forest, city pop">
+            </div>
+          </section>
 
-          <div id="typeagenre_afternoon" class="hiddenc mt-3"
-            style="justify-content: center; align-items: center; margin-top: 10px; margin-left: 60px;">
-            <label class="text-white " for="genre-input-afternoon" style="font-size: medium; ">Type a genre for
-              Afternoon:</label>
-            <input type="text" id="genre-input-afternoon" class=" ms-2">
-          </div>
-          <div style="display: flex; justify-content: center; font-size: medium; margin-top: 10px;">
-            <label for="Wallpaper-options-evening" class="text-white"
-              style="display: flex; justify-content: center; margin-right: 2px;">
-              Type of wallpaper in Evening:
-            </label>
+          <section class="slot-card">
+            <div class="field-group">
+              <label for="Wallpaper-options-evening" class="field-label">Evening mood</label>
+              <select required id="Wallpaper-options-evening" class="field-control">
+                <option selected hidden disabled value="select">Select</option>
+                <option value="coding">Coding</option>
+                <option value="nature">Nature</option>
+                <option value="anime">Anime</option>
+                <option value="space">Space</option>
+                <option value="typeagenre_evening">Type a Genre</option>
+              </select>
+            </div>
 
-            <select required id="Wallpaper-options-evening" style="margin-left: 3px;">
-              <option selected hidden disabled value="select">Select</option>
-              <option value="coding">Coding</option>
-              <option value="Nature">Nature</option>
-              <option value="Anime">Anime</option>
-              <option value="Space">Space</option>
-              <option value="typeagenre_evening">Type a Genre</option>
-              <!-- <option value="custom">Custom</option> -->
-            </select>
-          </div>
+            <div id="typeagenre_evening" class="field-inline hiddenc">
+              <label class="field-label" for="genre-input-evening">Evening genre</label>
+              <input type="text" id="genre-input-evening" class="field-control" placeholder="neon city, rain room, synthwave">
+            </div>
+          </section>
 
-          <div id="typeagenre_evening" class="hiddenc mt-3"
-            style="justify-content: center; align-items: center; margin-top: 10px; margin-left: 60px;">
-            <label class="text-white " for="genre-input-evening" style="font-size: medium; ">Type a genre for
-              Evening:</label>
-            <input type="text" id="genre-input-evening" class=" ms-2">
-          </div>
-          <div style="display: flex; justify-content: center; font-size: medium; margin-top: 10px;">
-            <label for="Wallpaper-options-night" class="text-white"
-              style="display: flex; justify-content: center; margin-right: 2px;">
-              Type of wallpaper in Night:
-            </label>
+          <section class="slot-card">
+            <div class="field-group">
+              <label for="Wallpaper-options-night" class="field-label">Night mood</label>
+              <select required id="Wallpaper-options-night" class="field-control">
+                <option selected hidden disabled value="select">Select</option>
+                <option value="coding">Coding</option>
+                <option value="nature">Nature</option>
+                <option value="anime">Anime</option>
+                <option value="space">Space</option>
+                <option value="typeagenre_night">Type a Genre</option>
+              </select>
+            </div>
 
-            <select required id="Wallpaper-options-night" style="margin-left: 3px;">
-              <option selected hidden disabled value="select">Select</option>
-              <option value="Coding">Coding</option>
-              <option value="Nature">Nature</option>
-              <option value="Anime">Anime</option>
-              <option value="Space">Space</option>
-              <option value="typeagenre_night">Type a Genre</option>
-              <!-- <option value="custom">Custom</option> -->
-            </select>
-          </div>
-
-          <div id="typeagenre_night" class="hiddenc mt-3"
-            style="justify-content: center; align-items: center; margin-top: 10px; margin-left: 60px;">
-            <label class="text-white " for="genre-input-night" style="font-size: medium; ">Type a genre for
-              Night:</label>
-            <input type="text" id="genre-input-night" class=" ms-2">
-          </div>
-
-        </div>
-        <div style="display:flex; justify-content: center; align-items: center; margin: 10px; font-size: medium;"
-          class="mt-3">
-          <button type="submit" class="btn btn-primary">Submit</button>
+            <div id="typeagenre_night" class="field-inline hiddenc">
+              <label class="field-label" for="genre-input-night">Night genre</label>
+              <input type="text" id="genre-input-night" class="field-control" placeholder="midnight sky, dark room, lo-fi">
+            </div>
+          </section>
         </div>
 
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Save Schedule</button>
+        </div>
       </form>
+    </section>
+  </main>
 
-
-
-    </div>
-  </div>
   <script src="scripts/settings.js" defer></script>
 </body>
 

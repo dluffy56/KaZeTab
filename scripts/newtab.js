@@ -1,8 +1,20 @@
+const FALLBACK_FAVICON = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" rx="3" fill="%2399a1ad"/></svg>';
+let bookmarkManager = null;
+
+function scheduleIdleWork(callback) {
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(callback, { timeout: 350 });
+    return;
+  }
+
+  window.setTimeout(callback, 120);
+}
+
 function getStorage(keys) {
   return new Promise((resolve) => {
     try {
-      chrome.storage.local.get(keys, (res) => resolve(res || {}));
-    } catch (e) {
+      chrome.storage.local.get(keys, (result) => resolve(result || {}));
+    } catch (error) {
       resolve({});
     }
   });
@@ -10,90 +22,60 @@ function getStorage(keys) {
 
 function setWallpaperUrl(url) {
   if (!url) return;
-  const container = document.getElementById('wallpaper') || document.body;
+
+  const container = document.getElementById('wallpaper-container') || document.body;
   container.style.backgroundImage = `url("${url}")`;
   container.style.backgroundSize = 'cover';
   container.style.backgroundPosition = 'center';
   container.style.backgroundRepeat = 'no-repeat';
 }
 
-function getSlotForHour(h) {
-  if (h < 12) return 'morning';
-  if (h < 18) return 'afternoon';
-  if (h < 22) return 'evening';
+function getSlotForHour(hour) {
+  if (hour < 12) return 'morning';
+  if (hour < 18) return 'afternoon';
+  if (hour < 22) return 'evening';
   return 'night';
 }
 
 async function loadWallpaperOnStart() {
-  const res = await getStorage(['wallpaperUrl', 'timeBasedGreetings', 'timeSlotCategories', 'mode']);
-  const h = new Date().getHours();
-  // the below lines are for testing purpose of wallpaper set from settings-form
-  // const urlParams = new URLSearchParams(window.location.search); 
-  // const debugHour = urlParams.has('hour') ? Number(urlParams.get('hour')) : null;
-  // const h = (debugHour !== null && !isNaN(debugHour)) ? debugHour : new Date().getHours();
-  const slot = getSlotForHour(h);
+  const result = await getStorage(['wallpaperUrl', 'timeSlotCategories', 'mode']);
+  const slot = getSlotForHour(new Date().getHours());
 
-  if (res.mode === 'different' && res.timeSlotCategories) {
+  if (result.mode === 'different' && result.timeSlotCategories) {
     const key = `wallpaper_${slot}`;
-    const slotRes = await getStorage([key]);
-    if (slotRes && slotRes[key]) {
-      setWallpaperUrl(slotRes[key]);
+    const slotWallpaper = await getStorage([key]);
+
+    if (slotWallpaper[key]) {
+      setWallpaperUrl(slotWallpaper[key]);
       return;
     }
-
-
-    if (res.wallpaperUrl) {
-      setWallpaperUrl(res.wallpaperUrl);
-      return;
-    }
-
-
-    return;
   }
 
-
-  if (res.wallpaperUrl) {
-    setWallpaperUrl(res.wallpaperUrl);
-    return;
+  if (result.wallpaperUrl) {
+    setWallpaperUrl(result.wallpaperUrl);
   }
-
 }
-
 
 function showGreetingIfNeeded() {
   chrome.storage.local.get(['timeBasedGreetings'], (result) => {
-    const timebased = !!result.timeBasedGreetings;
-    if (!timebased) return;
+    if (!result.timeBasedGreetings) return;
 
-    const time = new Date();
-    const h = time.getHours();
-    const greetings = h < 12
+    const hour = new Date().getHours();
+    const greeting = hour < 12
       ? 'Morning Champ!'
-      : h < 18
+      : hour < 18
         ? 'Afternoon!'
-        : h <= 22
+        : hour <= 22
           ? 'Evening'
           : 'Night, Go Sleep!';
 
     const greetingDisplay = document.getElementById('greeting-text');
-    if (greetingDisplay) greetingDisplay.textContent = greetings;
+    if (greetingDisplay) {
+      greetingDisplay.textContent = greeting;
+    }
   });
 }
 
-
-chrome.runtime.onMessage.addListener((msg) => {
-  if (!msg || typeof msg !== 'object') return;
-  if (msg.type === 'wallpaper-updated' && msg.url) {
-
-    setWallpaperUrl(msg.url);
-  }
-
-  if (msg.type === 'mode-changed') {
-    loadWallpaperOnStart();
-  }
-});
-
-//used ai here(didn't know much about bookmarks and all)
 class BookmarkManager {
   constructor() {
     this.loadingElement = document.getElementById('bookmarks-loading');
@@ -105,37 +87,46 @@ class BookmarkManager {
     try {
       const tree = await chrome.bookmarks.getTree();
       const bookmarksBar = this.findBookmarksBar(tree[0]);
+
       if (bookmarksBar && bookmarksBar.children) {
         this.renderBookmarks(bookmarksBar.children);
-      } else {
+      } else if (this.loadingElement) {
         this.loadingElement.textContent = 'No bookmarks found';
       }
     } catch (error) {
       console.error('Error fetching bookmarks:', error);
-      this.loadingElement.textContent = 'Error loading bookmarks';
+      if (this.loadingElement) {
+        this.loadingElement.textContent = 'Error loading bookmarks';
+      }
     }
   }
 
   findBookmarksBar(root) {
     if (!root.children) return null;
+
     for (const child of root.children) {
       if (child.title === 'Bookmarks bar' || child.title === 'Bookmarks Bar') {
         return child;
       }
     }
+
     return root.children[0] || null;
   }
 
   renderBookmarks(bookmarks) {
+    if (!this.loadingElement || !this.bookmarksContainer) {
+      return;
+    }
+
     this.loadingElement.style.display = 'none';
     this.bookmarksContainer.style.display = 'flex';
     this.bookmarksContainer.innerHTML = '';
-   
 
-    bookmarks.forEach(bookmark => {
-      const el = this.createBookmarkElement(bookmark);
-      this.bookmarksContainer.appendChild(el);
-      
+    bookmarks.forEach((bookmark) => {
+      const element = this.createBookmarkElement(bookmark);
+      if (element) {
+        this.bookmarksContainer.appendChild(element);
+      }
     });
   }
 
@@ -144,13 +135,15 @@ class BookmarkManager {
       const link = document.createElement('a');
       link.href = bookmark.url;
       link.target = '_self';
-      link.className = 'bookmark-item'; 
+      link.className = 'bookmark-item';
 
       const favicon = document.createElement('img');
       favicon.className = 'bookmark-favicon';
+      favicon.loading = 'lazy';
+      favicon.decoding = 'async';
       favicon.src = this.getFaviconUrl(bookmark.url);
       favicon.onerror = () => {
-        favicon.src = 'data:image/svg+xml;base64,...';  
+        favicon.src = FALLBACK_FAVICON;
       };
 
       const title = document.createElement('span');
@@ -160,12 +153,16 @@ class BookmarkManager {
       link.appendChild(favicon);
       link.appendChild(title);
       return link;
-    } else if (bookmark.children) {
+    }
+
+    if (bookmark.children) {
       const folder = document.createElement('span');
       folder.textContent = bookmark.title || 'Folder';
       folder.className = 'bookmark-folder';
       return folder;
     }
+
+    return null;
   }
 
   getFaviconUrl(url) {
@@ -178,59 +175,100 @@ class BookmarkManager {
   }
 }
 
+function applyShowBookmarksSetting(show) {
+  const bookmarksDiv = document.getElementById('bookmarks-container');
+  if (!bookmarksDiv) return;
+  bookmarksDiv.style.display = show ? 'flex' : 'none';
+
+  if (show && !bookmarkManager) {
+    scheduleIdleWork(() => {
+      if (!bookmarkManager) {
+        bookmarkManager = new BookmarkManager();
+      }
+    });
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const res = await getStorage(['showBookmarks']);
-  const show = res.showBookmarks !== false;
-  applyShowBookmarksSetting(show);
-  
+  const result = await getStorage(['showBookmarks']);
+  const showBookmarks = result.showBookmarks !== false;
+  applyShowBookmarksSetting(showBookmarks);
+
   try {
     await loadWallpaperOnStart();
-  } catch (err) {
-    console.error('Error while loading wallpaper on start:', err);
+  } catch (error) {
+    console.error('Error while loading wallpaper on start:', error);
   }
 
   try {
     showGreetingIfNeeded();
-  } catch (e) {
-    console.error('Greeting error', e);
+  } catch (error) {
+    console.error('Greeting error', error);
   }
-
 
   const searchForm = document.getElementById('searchForm');
   const searchBox = document.getElementById('searchBox');
 
   if (searchForm && searchBox) {
-    searchForm.addEventListener('submit', (e) => {
-      e.preventDefault();
+    searchForm.addEventListener('submit', (event) => {
+      event.preventDefault();
       const query = searchBox.value.trim();
+
       if (!query) return;
+
       try {
         if (window.chrome && chrome.search && typeof chrome.search.query === 'function') {
           chrome.search.query({ text: query });
         } else {
           window.open('https://www.google.com/search?q=' + encodeURIComponent(query), '_blank');
         }
-      } catch (err) {
+      } catch (error) {
         window.open('https://www.google.com/search?q=' + encodeURIComponent(query), '_blank');
       }
     });
   }
-  new BookmarkManager();
+
+  if (showBookmarks) {
+    scheduleIdleWork(() => {
+      if (!bookmarkManager) {
+        bookmarkManager = new BookmarkManager();
+      }
+    });
+  }
 });
 
-const show_bookmarks  = document.getElementById("Show_Bookmakrs")
+chrome.runtime.onMessage.addListener((message) => {
+  if (!message || typeof message !== 'object') return;
 
-function applyShowBookmarksSetting(show){
-  bookmarks_div = document.getElementById("bookmarks-container")
-  if (!bookmarks_div) return;
-  bookmarks_div.style.display = show?  'flex' : 'none';
-}
+  if (message.type === 'wallpaper-updated' && message.url) {
+    setWallpaperUrl(message.url);
+  }
 
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area!== 'local') return;
+  if (message.type === 'mode-changed') {
+    loadWallpaperOnStart().catch((error) => console.error('Mode change reload failed', error));
+  }
+});
 
-  if (changes.showBookmarks){
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+
+  if (changes.showBookmarks) {
     applyShowBookmarksSetting(!!changes.showBookmarks.newValue);
   }
-})
+
+  const currentSlotKey = `wallpaper_${getSlotForHour(new Date().getHours())}`;
+
+  if (changes.wallpaperUrl?.newValue) {
+    setWallpaperUrl(changes.wallpaperUrl.newValue);
+    return;
+  }
+
+  if (changes[currentSlotKey]?.newValue) {
+    setWallpaperUrl(changes[currentSlotKey].newValue);
+    return;
+  }
+
+  if (changes.mode || changes.timeSlotCategories || changes.timeBasedWallpaper) {
+    loadWallpaperOnStart().catch((error) => console.error('Reload wallpaper failed', error));
+  }
+});

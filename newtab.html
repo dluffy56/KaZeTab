@@ -10,36 +10,38 @@
 
 <body>
     <div id="wallpaper-container">
-        
-  <div id="bookmarks-container">
-    <div id="bookmarks-bar" class="bookmarks-bar">
-      <div id="bookmarks-loading">Loading...</div>
-      <div id="bookmarks-list" class="bookmarks-list" style="display:none;"><hr></div>
-    </div>
-  </div>
-       
-        <div id="content-overlay">
-            <div id="greeting-section">
-                <h1 id="greeting-text"></h1>
-            </div>
-        </div>
+        <div class="wallpaper-shade"></div>
 
-        <div id="search-section" style="max-width:1000px; margin:auto;">
-            <form id="searchForm" autocomplete="off" style="margin-top: 230px;">
-                <div class="input-group input-group-sm mb-3">
-                    <input style="color: white;" type="text" placeholder="Dig into the internet..." id="searchBox"
-                        class="form-control" required>
-                    <button class="btn" type="submit" style="margin-left: 4px; height: 40px; width: 90px;">
-                        Search
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                            class="bi bi-search" viewBox="0 0 14 16">
-                            <path
-                                d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-                        </svg>
-                    </button>
-                </div>
-            </form>
-        </div>
+        <header id="bookmarks-container">
+            <div id="bookmarks-bar" class="bookmarks-bar">
+                <span class="bookmarks-label">Quick Links</span>
+                <div id="bookmarks-loading">Loading...</div>
+                <div id="bookmarks-list" class="bookmarks-list"></div>
+            </div>
+        </header>
+
+        <main id="content-overlay">
+            <section class="hero-panel">
+                <p class="eyebrow">KaZeTab</p>
+                <h1 id="greeting-text">Open calmer.</h1>
+
+                <form id="searchForm" class="search-card" autocomplete="off">
+                    <label class="sr-only" for="searchBox">Search the web</label>
+                    <div class="search-row">
+                        <input type="text" placeholder="Search without breaking your flow..." id="searchBox"
+                            class="search-input" spellcheck="false" required>
+                        <button class="search-button" type="submit">
+                            <span>Search</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                class="bi bi-search" viewBox="0 0 14 16" aria-hidden="true">
+                                <path
+                                    d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </main>
     </div>
 
     <script src="scripts/newtab.js"></script>

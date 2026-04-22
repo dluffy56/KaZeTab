@@ -1,416 +1,320 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const wallpaper_id = document.getElementById("Wallpaper-options");
-  const type_a_genre = document.getElementById("typeagenre");
-  const custom = document.getElementById("custom");
-  const quote_id = document.getElementById("quote-options");
-  const quote_input = document.getElementById("quote_custom_div");
-  const form = document.getElementById("settings-form");
-  const mode_same = document.getElementById("mode-same");
-  const mode_diff = document.getElementById("mode-different");
-  const custom_form = document.getElementById("custom-settings-form")
-  const wallpaper_id_morning = document.getElementById("Wallpaper-options-morning")
-  const wallpaper_id_afternoon = document.getElementById("Wallpaper-options-afternoon")
-  const wallpaper_id_evening = document.getElementById("Wallpaper-options-evening")
-  const wallpaper_id_night = document.getElementById("Wallpaper-options-night")
+const SLOT_NAMES = ['morning', 'afternoon', 'evening', 'night'];
+const SLOT_SELECT_IDS = {
+  morning: 'Wallpaper-options-morning',
+  afternoon: 'Wallpaper-options-afternoon',
+  evening: 'Wallpaper-options-evening',
+  night: 'Wallpaper-options-night'
+};
+const SLOT_INPUT_IDS = {
+  morning: 'genre-input-morning',
+  afternoon: 'genre-input-afternoon',
+  evening: 'genre-input-evening',
+  night: 'genre-input-night'
+};
+const SLOT_WRAPPER_IDS = {
+  morning: 'typeagenre_morning',
+  afternoon: 'typeagenre_afternoon',
+  evening: 'typeagenre_evening',
+  night: 'typeagenre_night'
+};
+const PRESET_VALUES = new Set(['coding', 'nature', 'anime', 'space']);
 
-  const type_a_genre_morning = document.getElementById("typeagenre_morning")
-  const type_a_genre_afternoon = document.getElementById("typeagenre_afternoon")
-  const type_a_genre_evening = document.getElementById("typeagenre_evening")
-  const type_a_genre_night = document.getElementById("typeagenre_night")
+function getStorage(keys) {
+  return new Promise((resolve) => chrome.storage.local.get(keys, (result) => resolve(result || {})));
+}
 
-  const showBookmarksSwitch   = document.getElementById("Show_Bookmakrs")
+function setStorage(values) {
+  return new Promise((resolve) => chrome.storage.local.set(values, resolve));
+}
 
+function removeStorage(keys) {
+  return new Promise((resolve) => chrome.storage.local.remove(keys, resolve));
+}
 
-  chrome.storage.local.get(['showBookmarks'], (res) => {
-    if (res && typeof res.showBookmarks !== 'undefined') {
-      showBookmarksSwitch.checked = !!res.showBookmarks;
+function normalizeCategory(value) {
+  if (!value) return '';
+  const trimmed = String(value).trim().toLowerCase();
+  if (trimmed.startsWith('typeagenre')) return 'typeagenre';
+  return trimmed;
+}
+
+function isGenreChoice(value) {
+  return normalizeCategory(value) === 'typeagenre';
+}
+
+async function fetchWallpaper(category) {
+  const query = encodeURIComponent(normalizeCategory(category) || 'anime');
+  const url = `https://wallhaven.cc/api/v1/search?q=${query}&categories=111&purity=100&sorting=random&resolutions=1920x1080&ratios=16x9`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.data || data.data.length === 0) {
+    throw new Error('No wallpapers found in API response');
+  }
+
+  return data.data[0].path;
+}
+
+function toggleVisibility(element, visible) {
+  if (!element) return;
+  element.classList.toggle('hiddenc', !visible);
+  element.classList.toggle('visible', visible);
+}
+
+function setMode(mode, form, customForm, modeSameBtn, modeDifferentBtn) {
+  const isDifferent = mode === 'different';
+  toggleVisibility(form, !isDifferent);
+  toggleVisibility(customForm, isDifferent);
+  modeSameBtn?.classList.toggle('active', !isDifferent);
+  modeDifferentBtn?.classList.toggle('active', isDifferent);
+}
+
+function syncMainGenreVisibility(selectElement, genreWrapper) {
+  toggleVisibility(genreWrapper, isGenreChoice(selectElement?.value));
+}
+
+function syncSlotGenreVisibility(slot) {
+  const selectElement = document.getElementById(SLOT_SELECT_IDS[slot]);
+  const wrapper = document.getElementById(SLOT_WRAPPER_IDS[slot]);
+  toggleVisibility(wrapper, isGenreChoice(selectElement?.value));
+}
+
+function getGenreInputValue(inputId) {
+  return normalizeCategory(document.getElementById(inputId)?.value || '');
+}
+
+async function saveDifferentMode() {
+  const timeSlotCategories = {};
+  const customGenres = {};
+
+  for (const slot of SLOT_NAMES) {
+    const selectElement = document.getElementById(SLOT_SELECT_IDS[slot]);
+    const selectedValue = selectElement?.value || '';
+
+    if (!selectedValue || selectedValue === 'select') {
+      throw new Error(`Please select a wallpaper type for ${slot}.`);
     }
+
+    if (isGenreChoice(selectedValue)) {
+      const typedGenre = getGenreInputValue(SLOT_INPUT_IDS[slot]);
+      if (!typedGenre) {
+        throw new Error(`Please enter a genre for ${slot}.`);
+      }
+      timeSlotCategories[slot] = typedGenre;
+      customGenres[slot] = typedGenre;
+      continue;
+    }
+
+    timeSlotCategories[slot] = normalizeCategory(selectedValue);
+    customGenres[slot] = '';
+  }
+
+  await setStorage({
+    mode: 'different',
+    timeBasedWallpaper: true,
+    timeSlotCategories,
+    customGenres
   });
-  
-  showBookmarksSwitch.addEventListener('change', () => {
+
+  return chrome.runtime.sendMessage({ type: 'timeSlotsUpdated' });
+}
+
+async function saveSameMode() {
+  const wallpaperSelect = document.getElementById('Wallpaper-options');
+  const genreInput = document.getElementById('genre-input');
+  const showBookmarksSwitch = document.getElementById('Show_Bookmakrs');
+  const greetingsSwitch = document.getElementById('timebased_greetings');
+  const timeBasedWallpaperSwitch = document.getElementById('timebased_wallpaper');
+
+  if (!wallpaperSelect || wallpaperSelect.value === 'select') {
+    throw new Error('Please select a wallpaper type!');
+  }
+
+  const rawType = normalizeCategory(wallpaperSelect.value);
+  const resolvedCategory = isGenreChoice(rawType)
+    ? normalizeCategory(genreInput?.value || '')
+    : rawType;
+
+  if (!resolvedCategory) {
+    throw new Error('Please enter a genre before saving.');
+  }
+
+  const wallpaperUrl = await fetchWallpaper(resolvedCategory);
+  const timeBasedWallpaper = !!timeBasedWallpaperSwitch?.checked;
+  const baseSettings = {
+    wallpaperType: rawType,
+    wallpaperUrl,
+    customGenre: isGenreChoice(rawType) ? resolvedCategory : '',
+    timeBasedGreetings: !!greetingsSwitch?.checked,
+    showBookmarks: !!showBookmarksSwitch?.checked,
+    timeBasedWallpaper
+  };
+
+  if (timeBasedWallpaper) {
+    const timeSlotCategories = {};
+    const customGenres = {};
+
+    for (const slot of SLOT_NAMES) {
+      timeSlotCategories[slot] = resolvedCategory;
+      customGenres[slot] = isGenreChoice(rawType) ? resolvedCategory : '';
+    }
+
+    await setStorage({
+      ...baseSettings,
+      mode: 'different',
+      timeSlotCategories,
+      customGenres
+    });
+    chrome.runtime.sendMessage({ type: 'timeSlotsUpdated' });
+    return;
+  }
+
+  await removeStorage(['timeSlotCategories', 'customGenres']);
+  await setStorage({
+    ...baseSettings,
+    mode: 'same'
+  });
+  chrome.runtime.sendMessage({ type: 'settingsUpdated' });
+}
+
+async function loadSavedSettings(form, customForm, modeSameBtn, modeDifferentBtn) {
+  const result = await getStorage([
+    'wallpaperType',
+    'customGenre',
+    'timeBasedGreetings',
+    'timeBasedWallpaper',
+    'showBookmarks',
+    'mode',
+    'timeSlotCategories',
+    'customGenres'
+  ]);
+
+  const wallpaperSelect = document.getElementById('Wallpaper-options');
+  const genreInput = document.getElementById('genre-input');
+  const greetingsSwitch = document.getElementById('timebased_greetings');
+  const timeBasedWallpaperSwitch = document.getElementById('timebased_wallpaper');
+  const showBookmarksSwitch = document.getElementById('Show_Bookmakrs');
+  const genreWrapper = document.getElementById('typeagenre');
+
+  if (greetingsSwitch) {
+    greetingsSwitch.checked = !!result.timeBasedGreetings;
+  }
+
+  if (timeBasedWallpaperSwitch) {
+    timeBasedWallpaperSwitch.checked = !!result.timeBasedWallpaper;
+  }
+
+  if (showBookmarksSwitch) {
+    showBookmarksSwitch.checked = result.showBookmarks !== false;
+  }
+
+  if (result.mode === 'different') {
+    setMode('different', form, customForm, modeSameBtn, modeDifferentBtn);
+
+    for (const slot of SLOT_NAMES) {
+      const selectElement = document.getElementById(SLOT_SELECT_IDS[slot]);
+      const inputElement = document.getElementById(SLOT_INPUT_IDS[slot]);
+      const category = normalizeCategory(result.timeSlotCategories?.[slot]);
+      const customValue = normalizeCategory(result.customGenres?.[slot]);
+
+      if (!selectElement) {
+        continue;
+      }
+
+      if (PRESET_VALUES.has(category)) {
+        selectElement.value = category;
+      } else if (category) {
+        selectElement.value = `typeagenre_${slot}`;
+        if (inputElement) {
+          inputElement.value = customValue || category;
+        }
+      }
+
+      syncSlotGenreVisibility(slot);
+    }
+
+    return;
+  }
+
+  setMode('same', form, customForm, modeSameBtn, modeDifferentBtn);
+
+  if (wallpaperSelect) {
+    wallpaperSelect.value = result.wallpaperType || 'select';
+    if (result.wallpaperType === 'typeagenre' && genreInput) {
+      genreInput.value = result.customGenre || '';
+    }
+    syncMainGenreVisibility(wallpaperSelect, genreWrapper);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const form = document.getElementById('settings-form');
+  const customForm = document.getElementById('custom-settings-form');
+  const modeSameBtn = document.getElementById('mode-same');
+  const modeDifferentBtn = document.getElementById('mode-different');
+  const wallpaperSelect = document.getElementById('Wallpaper-options');
+  const mainGenreWrapper = document.getElementById('typeagenre');
+  const showBookmarksSwitch = document.getElementById('Show_Bookmakrs');
+
+  if (typeof chrome === 'undefined' || !chrome.storage || !form || !customForm || !wallpaperSelect) {
+    console.error('Chrome extension APIs or required elements are not available');
+    return;
+  }
+
+  showBookmarksSwitch?.addEventListener('change', () => {
     chrome.storage.local.set({ showBookmarks: showBookmarksSwitch.checked });
   });
 
-
-
-
-  function showForm_normal() {
-    if (!form) return;
-    form.classList.remove('hiddenc');
-    form.classList.add('visible');
-  }
-  function hideForm_normal() {
-    if (!form) return;
-    form.classList.remove('visible');
-    form.classList.add('hiddenc');
-  }
-  function showForm_custom() {
-    if (!custom_form) return;
-    custom_form.classList.remove('hiddenc');
-    custom_form.classList.add('visible');
-  }
-  function hideForm_custom() {
-    if (!custom_form) return;
-    custom_form.classList.remove('visible');
-    custom_form.classList.add('hiddenc');
-  }
-
-  if (mode_same) {
-    mode_same.addEventListener("click", () => {
-      hideForm_custom();
-      showForm_normal();
-      mode_same.classList.add('active');
-      if (mode_diff) mode_diff.classList.remove('active');
-    });
-  }
-  if (mode_diff) {
-    mode_diff.addEventListener("click", () => {
-      hideForm_normal();
-      showForm_custom();
-      if (mode_diff) mode_diff.classList.add('active');
-      if (mode_same) mode_same.classList.remove('active');
-    });
-  }
-
-
-
-  if (typeof chrome === 'undefined' || !chrome.storage) {
-    console.error("Chrome extension APIs not available");
-    alert("This page must be opened through the extension settings.");
-    return;
-  }
-
-
-  // took help from ai to reframe some parts like chrome.storage and for debugging parts as am mid in js:( 
-  if (!wallpaper_id || !form) {
-    console.error("Required elements not found");
-    return;
-  }
-
-  wallpaper_id.addEventListener("change", () => {
-    if (type_a_genre) {
-      type_a_genre.classList.add("hiddenc");
-      type_a_genre.classList.remove("visible");
-    }
-    if (custom) {
-      custom.classList.add("hiddenc");
-      custom.classList.remove("visible");
-    }
-
-    if (wallpaper_id.value === "typeagenre" && type_a_genre) {
-      type_a_genre.classList.remove("hiddenc");
-      type_a_genre.classList.add("visible");
-    } else if (wallpaper_id.value === "custom" && custom) {
-      custom.classList.remove("hiddenc");
-      custom.classList.add("visible");
-    }
+  modeSameBtn?.addEventListener('click', () => {
+    setMode('same', form, customForm, modeSameBtn, modeDifferentBtn);
   });
 
-  if (quote_id && quote_input) {
-    quote_id.addEventListener("change", () => {
-      quote_input.classList.add("hiddenc");
-      quote_input.classList.remove("visible");
+  modeDifferentBtn?.addEventListener('click', () => {
+    setMode('different', form, customForm, modeSameBtn, modeDifferentBtn);
+  });
 
-      if (quote_id.value === "Custom") {
-        quote_input.classList.remove("hiddenc");
-        quote_input.classList.add("visible");
-      }
-    });
+  wallpaperSelect.addEventListener('change', () => {
+    syncMainGenreVisibility(wallpaperSelect, mainGenreWrapper);
+  });
+
+  for (const slot of SLOT_NAMES) {
+    const selectElement = document.getElementById(SLOT_SELECT_IDS[slot]);
+    selectElement?.addEventListener('change', () => syncSlotGenreVisibility(slot));
   }
 
-  if (!wallpaper_id_morning || !custom_form) {
-    console.error("Required elements not found");
-    return;
-  }
-
-  wallpaper_id_morning.addEventListener("change", () => {
-    if (type_a_genre_morning) {
-      type_a_genre_morning.classList.add("hiddenc");
-      type_a_genre_morning.classList.remove("visible");
-    }
-    if (wallpaper_id_morning.value === "typeagenre_morning" && type_a_genre_morning) {
-      type_a_genre_morning.classList.remove("hiddenc");
-      type_a_genre_morning.classList.add("visible");
-    }
-  });
-
-  wallpaper_id_afternoon.addEventListener("change", () => {
-    if (type_a_genre_afternoon) {
-      type_a_genre_afternoon.classList.add("hiddenc");
-      type_a_genre_afternoon.classList.remove("visible");
-    }
-    if (wallpaper_id_afternoon.value === "typeagenre_afternoon" && type_a_genre_afternoon) {
-      type_a_genre_afternoon.classList.remove("hiddenc");
-      type_a_genre_afternoon.classList.add("visible");
-    }
-  });
-
-  wallpaper_id_evening.addEventListener("change", () => {
-    if (type_a_genre_evening) {
-      type_a_genre_evening.classList.add("hiddenc");
-      type_a_genre_evening.classList.remove("visible");
-    }
-    if (wallpaper_id_evening.value === "typeagenre_evening" && type_a_genre_evening) {
-      type_a_genre_evening.classList.remove("hiddenc");
-      type_a_genre_evening.classList.add("visible");
-    }
-  });
-
-  wallpaper_id_night.addEventListener("change", () => {
-    if (type_a_genre_night) {
-      type_a_genre_night.classList.add("hiddenc");
-      type_a_genre_night.classList.remove("visible");
-    }
-    if (wallpaper_id_night.value === "typeagenre_night" && type_a_genre_night) {
-      type_a_genre_night.classList.remove("hiddenc");
-      type_a_genre_night.classList.add("visible");
-    }
-  });
-
-
-  if (custom_form) {
-
-    custom_form.addEventListener('submit', (e) => {
-      e.preventDefault();
-
-      const morningVal = document.getElementById('Wallpaper-options-morning')?.value || '';
-      const afternoonVal = document.getElementById('Wallpaper-options-afternoon')?.value || '';
-      const eveningVal = document.getElementById('Wallpaper-options-evening')?.value || '';
-      const nightVal = document.getElementById('Wallpaper-options-night')?.value || '';
-
-      function readGenreIfNeeded(selectValue, inputId) {
-        if (String(selectValue).includes('typeagenre')) {
-          return document.getElementById(inputId)?.value?.trim() || '';
-        }
-        return '';
-      }
-
-      const customGenres = {
-        morning: readGenreIfNeeded(morningVal, 'genre-input-morning'),
-        afternoon: readGenreIfNeeded(afternoonVal, 'genre-input-afternoon'),
-        evening: readGenreIfNeeded(eveningVal, 'genre-input-evening'),
-        night: readGenreIfNeeded(nightVal, 'genre-input-night')
-      };
-
-      const timeSlotCategories = {
-        morning: customGenres.morning ? customGenres.morning : morningVal,
-        afternoon: customGenres.afternoon ? customGenres.afternoon : afternoonVal,
-        evening: customGenres.evening ? customGenres.evening : eveningVal,
-        night: customGenres.night ? customGenres.night : nightVal
-      };
-
-      chrome.storage.local.set({ timeSlotCategories, customGenres, mode: 'different' }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('Save failed', chrome.runtime.lastError);
-          alert('Failed to save settings');
-          return;
-        }
-        alert('Wallpaper Set! Reload the new tab to see. enjoy:)..');
-
-        try {
-          chrome.runtime.sendMessage({ type: 'timeSlotsUpdated' });
-        }
-        catch (e) {
-        }
-      });
-    });
-  }
-
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    if (wallpaper_id.value === "select") {
-      alert("Please select a wallpaper type!");
-      return;
-    }
-
-    const typeofwall = wallpaper_id.value;
+  customForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
 
     try {
-      let searchQuery = "";
-
-      switch (typeofwall) {
-        case "coding":
-          searchQuery = "coding";
-          break;
-        case "Nature":
-          searchQuery = "nature";
-          break;
-        case "Anime":
-          searchQuery = "anime";
-          break;
-        case "Space":
-          searchQuery = "space";
-          break;
-        case "typeagenre":
-          const genreInput = document.getElementById("genre-input");
-          searchQuery = genreInput?.value || "anime";
-          break;
-        default:
-          searchQuery = "anime";
-      }
-
-      if (typeofwall !== "custom") {
-        const url = `https://wallhaven.cc/api/v1/search?q=${encodeURIComponent(searchQuery)}&categories=111&purity=100&sorting=random&resolutions=1920x1080&ratios=16x9`;
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const data = await response.json();
-        if (!data.data || data.data.length === 0) throw new Error("No wallpapers found in API response");
-
-        const imgurl = data.data[0].path;
-
-        const settings = {
-          wallpaperType: typeofwall,
-          wallpaperUrl: imgurl,
-          quoteType: quote_id?.value || "none",
-          customQuote: document.getElementById("quote_input")?.value || "",
-          weatherCity: document.getElementById("weather_input")?.value || "",
-          timeBasedGreetings: document.getElementById("timebased_greetings")?.checked || false
-        };
-
-        if (typeofwall === "typeagenre") {
-          settings.customGenre = document.getElementById("genre-input")?.value || "";
-        }
-
-        const timebasedWallpaperToggle = !!document.getElementById('timebased_wallpaper')?.checked;
-
-        function getTypedGenreIfNeeded(selectValue, inputId) {
-          if (selectValue === 'typeagenre') {
-            return document.getElementById(inputId)?.value?.trim() || 'anime';
-          }
-          return selectValue;
-        }
-
-        if (timebasedWallpaperToggle) {
-          const slotCategory = getTypedGenreIfNeeded(typeofwall, 'genre-input');
-
-          const timeSlotCategories = {
-            morning: slotCategory,
-            afternoon: slotCategory,
-            evening: slotCategory,
-            night: slotCategory
-          };
-
-          const customGenres = {
-            morning: (typeofwall === 'typeagenre') ? (document.getElementById('genre-input')?.value?.trim() || '') : '',
-            afternoon: (typeofwall === 'typeagenre') ? (document.getElementById('genre-input')?.value?.trim() || '') : '',
-            evening: (typeofwall === 'typeagenre') ? (document.getElementById('genre-input')?.value?.trim() || '') : '',
-            night: (typeofwall === 'typeagenre') ? (document.getElementById('genre-input')?.value?.trim() || '') : ''
-          };
-
-          const toSave = Object.assign({}, settings, {
-            mode: 'different',
-            timeSlotCategories,
-            customGenres,
-            wallpaperType: typeofwall,
-            customGenre: (typeofwall === 'typeagenre') ? (document.getElementById('genre-input')?.value?.trim() || '') : '',
-            timeBasedWallpaper: true
-          });
-
-          chrome.storage.local.set(toSave, () => {
-            if (chrome.runtime.lastError) {
-              console.error('Error saving settings:', chrome.runtime.lastError);
-              alert('Error saving settings. Please try again.');
-              return;
-            }
-            try { chrome.runtime.sendMessage({ type: 'timeSlotsUpdated' }); } catch (e) { }
-            alert('Wallpaper Set! enjoy..');
-            chrome.tabs.create({ url: 'chrome://newtab' });
-          });
-
-        } else {
-          settings.mode = 'same';
-          settings.timeBasedWallpaper = false;
-
-          chrome.storage.local.set(settings, () => {
-            if (chrome.runtime.lastError) {
-              console.error("Error saving to storage:", chrome.runtime.lastError);
-              alert("Error saving settings. Please try again.");
-              return;
-            }
-            alert('Wallpaper Set! enjoy..');
-            chrome.tabs.create({ url: 'chrome://newtab' });
-          });
-        }
-      }
-
+      await saveDifferentMode();
+      alert('Wallpaper schedule saved! Open a new tab to see it live.');
+      chrome.tabs.create({ url: 'chrome://newtab' });
     } catch (error) {
-      console.error("Error:", error);
-      alert("Error: " + error.message);
+      console.error(error);
+      alert('Error: ' + error.message);
     }
   });
 
-  loadSavedSettings();
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
 
+    try {
+      await saveSameMode();
+      alert('Wallpaper settings saved!');
+      chrome.tabs.create({ url: 'chrome://newtab' });
+    } catch (error) {
+      console.error(error);
+      alert('Error: ' + error.message);
+    }
+  });
 
-
-});
-function loadSavedSettings() {
   try {
-    chrome.storage.local.get([
-      'wallpaperType',
-      'customGenre',
-      'quoteType',
-      'customQuote',
-      'weatherCity',
-      'timeBasedGreetings',
-      'timeBasedWallpaper'
-    ], (result) => {
-      if (chrome.runtime.lastError) {
-        console.error("Error loading settings:", chrome.runtime.lastError);
-        return;
-      }
-
-      if (result.wallpaperType) {
-        const wallpaperSelect = document.getElementById("Wallpaper-options");
-        if (wallpaperSelect) {
-          wallpaperSelect.value = result.wallpaperType;
-          wallpaperSelect.dispatchEvent(new Event('change'));
-        }
-      }
-
-      if (result.customGenre) {
-        const genreInput = document.getElementById("genre-input");
-        if (genreInput) genreInput.value = result.customGenre;
-      }
-
-      const quoteSelect = document.getElementById("quote-options");
-      if (quoteSelect && result.quoteType) {
-        quoteSelect.value = result.quoteType;
-        quoteSelect.dispatchEvent(new Event('change'));
-      }
-
-      const quoteInput = document.getElementById("quote_input");
-      if (quoteInput && result.customQuote) {
-        quoteInput.value = result.customQuote;
-      }
-
-      const weatherInput = document.getElementById("weather_input");
-      if (weatherInput && result.weatherCity) {
-        weatherInput.value = result.weatherCity;
-      }
-
-      const greetingsCheck = document.getElementById("timebased_greetings");
-      if (greetingsCheck) {
-        greetingsCheck.checked = !!result.timeBasedGreetings;
-      }
-
-      const wallpaperToggle = document.getElementById("timebased_wallpaper");
-      if (wallpaperToggle) {
-        wallpaperToggle.checked = !!result.timeBasedWallpaper;
-      }
-    });
-
+    await loadSavedSettings(form, customForm, modeSameBtn, modeDifferentBtn);
   } catch (error) {
-    console.error("Error loading settings:", error);
+    console.error('Error loading settings:', error);
   }
-}
+});
