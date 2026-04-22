@@ -1,6 +1,6 @@
 {
   "name": "KaZeTab",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "manifest_version": 3,
   "description": "A calm, mood-aware new tab with wallpapers, quick links, search, and time-based themes.",
   "permissions": [
